@@ -2,14 +2,15 @@
  * OpenCode Gwarden Mod - Server Entrypoint
  * 
  * Registers Gwarden AI provider (https://gwarden.su/cabinet)
- * with Google Gemini 4 Argon and DeepSeek V4 Flash (Free) in OpenCode.
+ * strictly with only 2 models:
+ *  - Google Gemini 4 Argon
+ *  - DeepSeek V4 Flash (Free)
  */
 
 import { watch } from "node:fs"
 import { Plugin } from "@opencode/plugin"
-import { readStore, writeStore, STORE_PATH, CONFIG_DIR } from "./src/config.js"
-import { buildModelInfo, buildProviderInfo, PROVIDER_ID, PRESET_MODELS } from "./src/models.js"
-import { fetchCatalog } from "./src/api.js"
+import { readStore, CONFIG_DIR } from "./src/config.js"
+import { buildModelInfo, buildProviderInfo, PROVIDER_ID, DEFAULT_API_KEY } from "./src/models.js"
 
 let isBooted = false
 
@@ -22,9 +23,8 @@ export default Plugin.define({
 
     let store = await readStore()
 
-    // Helper to register models into OpenCode's ProviderEditor
     const registerProvider = (editor, currentStore) => {
-      const apiKey = currentStore.apiKey || process.env.GWARDEN_API_KEY || ""
+      const apiKey = currentStore.apiKey || DEFAULT_API_KEY
       const baseURL = currentStore.baseURL || "https://gwarden.su/v1"
 
       const providerInfo = buildProviderInfo(PROVIDER_ID, {
@@ -32,18 +32,11 @@ export default Plugin.define({
         apiKey,
       })
 
-      // Collect all model IDs to register
-      const modelIds = Array.from(new Set([
-        "deepseek-v4-flash",
-        "gemini-4-argon",
-        ...(currentStore.models || []),
-        ...(Object.keys(currentStore.customModels || {})),
-      ]))
-
-      const modelInfos = modelIds.map(mId => {
-        const custom = currentStore.customModels?.[mId] || {}
-        return buildModelInfo(PROVIDER_ID, mId, custom)
-      })
+      // Strictly and only the two user-requested models
+      const modelInfos = [
+        buildModelInfo(PROVIDER_ID, "deepseek-v4-flash"),
+        buildModelInfo(PROVIDER_ID, "gemini-4-argon"),
+      ]
 
       try {
         const existing = editor.get(PROVIDER_ID)
@@ -59,8 +52,7 @@ export default Plugin.define({
             models: modelInfos,
           })
         }
-      } catch (err) {
-        // Fallback for editor implementations without get/update
+      } catch {
         try {
           editor.add({
             info: providerInfo,
@@ -78,21 +70,6 @@ export default Plugin.define({
       })
     } catch (err) {
       console.error("[gwarden-mod] Transform failed:", err?.message || err)
-    }
-
-    // Background update: if API key is present and catalog hasn't been fetched today
-    if (store.apiKey && (!store.lastCatalogFetch || Date.now() - store.lastCatalogFetch > 24 * 3600 * 1000)) {
-      fetchCatalog(store.baseURL, store.apiKey).then(async res => {
-        if (res.ok && res.models.length > 0) {
-          const newCatalog = { ...store.catalog }
-          for (const m of res.models) {
-            newCatalog[m.id] = m.name
-          }
-          store.catalog = newCatalog
-          store.lastCatalogFetch = Date.now()
-          await writeStore(store)
-        }
-      }).catch(() => {})
     }
 
     // Watch for changes in gwarden.json to hot-reload provider

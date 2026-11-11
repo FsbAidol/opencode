@@ -1,12 +1,18 @@
 /**
- * Configuration & State Management for Gwarden AI Mod
+ * Configuration & State Management for Gwarden AI Mod (2 Models Only)
  */
 
 import os from "node:os"
 import path from "node:path"
 import { existsSync } from "node:fs"
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises"
-import { DEFAULT_BASE_URL, PRESET_MODELS, PROVIDER_ID, PROVIDER_NAME } from "./models.js"
+import {
+  DEFAULT_BASE_URL,
+  DEFAULT_API_KEY,
+  PRESET_MODELS,
+  PROVIDER_ID,
+  PROVIDER_NAME,
+} from "./models.js"
 
 export const CONFIG_DIR = process.env.OPENCODE_CONFIG_DIR
   ? path.resolve(process.env.OPENCODE_CONFIG_DIR)
@@ -17,13 +23,13 @@ export const GLOBAL_OPENCODE_JSON = path.join(CONFIG_DIR, "opencode.json")
 export const LOCAL_OPENCODE_JSON = path.resolve(process.cwd(), "opencode.json")
 
 /**
- * Masks an API key for safe terminal/log display.
+ * Masks an API key for safe display.
  */
 export function maskKey(key) {
   if (!key) return "(не задан)"
   const trimmed = String(key).trim()
-  if (trimmed.length <= 8) return "****"
-  return `${trimmed.slice(0, 7)}...${trimmed.slice(-4)}`
+  if (trimmed.length <= 12) return "****"
+  return `${trimmed.slice(0, 9)}...${trimmed.slice(-8)}`
 }
 
 /**
@@ -34,28 +40,18 @@ export async function readStore() {
     const raw = await readFile(STORE_PATH, "utf8")
     const parsed = JSON.parse(raw)
     return {
-      apiKey: parsed.apiKey || process.env.GWARDEN_API_KEY || "",
+      apiKey: parsed.apiKey || process.env.GWARDEN_API_KEY || DEFAULT_API_KEY,
       baseURL: parsed.baseURL || DEFAULT_BASE_URL,
-      activeModel: parsed.activeModel || "deepseek-v4-flash",
-      models: Array.isArray(parsed.models) && parsed.models.length > 0
-        ? parsed.models
-        : ["deepseek-v4-flash", "gemini-4-argon"],
-      customModels: parsed.customModels && typeof parsed.customModels === "object"
-        ? parsed.customModels
-        : {},
-      catalog: parsed.catalog && typeof parsed.catalog === "object"
-        ? parsed.catalog
-        : {},
+      activeModel: parsed.activeModel === "gemini-4-argon" ? "gemini-4-argon" : "deepseek-v4-flash",
+      models: ["deepseek-v4-flash", "gemini-4-argon"],
       lastUpdated: parsed.lastUpdated || 0,
     }
   } catch {
     return {
-      apiKey: process.env.GWARDEN_API_KEY || "",
+      apiKey: process.env.GWARDEN_API_KEY || DEFAULT_API_KEY,
       baseURL: DEFAULT_BASE_URL,
       activeModel: "deepseek-v4-flash",
       models: ["deepseek-v4-flash", "gemini-4-argon"],
-      customModels: {},
-      catalog: {},
       lastUpdated: 0,
     }
   }
@@ -68,7 +64,10 @@ export async function writeStore(store) {
   await mkdir(CONFIG_DIR, { recursive: true })
   const tmp = `${STORE_PATH}.tmp`
   const data = {
-    ...store,
+    apiKey: store.apiKey || DEFAULT_API_KEY,
+    baseURL: store.baseURL || DEFAULT_BASE_URL,
+    activeModel: store.activeModel || "deepseek-v4-flash",
+    models: ["deepseek-v4-flash", "gemini-4-argon"],
     lastUpdated: Date.now(),
   }
   await writeFile(tmp, JSON.stringify(data, null, 2), "utf8")
@@ -77,51 +76,37 @@ export async function writeStore(store) {
 }
 
 /**
- * Generates OpenCode config JSON structure compatible with both v1 and v2 schemas.
+ * Generates OpenCode config JSON structure with strictly the 2 models.
+ * "enabled_providers": ["gwarden"] ensures OpenCode only displays these 2 models!
  */
 export function generateOpenCodeConfig(store, existingConfig = {}) {
-  const apiKey = store.apiKey ? store.apiKey : "{env:GWARDEN_API_KEY}"
+  const apiKey = store.apiKey || DEFAULT_API_KEY
   const baseURL = store.baseURL || DEFAULT_BASE_URL
-  const activeModel = store.activeModel || "deepseek-v4-flash"
+  const activeModel = store.activeModel === "gemini-4-argon" ? "gemini-4-argon" : "deepseek-v4-flash"
 
-  const modelsList = Array.from(new Set([
-    "deepseek-v4-flash",
-    "gemini-4-argon",
-    ...(store.models || []),
-    ...(Object.keys(store.customModels || {})),
-  ]))
-
-  // Models object for provider config
-  const providerModels = {}
-  for (const mId of modelsList) {
-    const preset = PRESET_MODELS[mId] || store.customModels?.[mId] || {}
-    const name = preset.name || store.catalog?.[mId] || mId
-    const context = preset.limit?.context || 1048576
-    const output = preset.limit?.output || 32768
-
-    providerModels[mId] = {
-      name,
+  const providerModels = {
+    "deepseek-v4-flash": {
+      name: "DeepSeek V4 Flash (Бесплатный)",
       limit: {
-        context,
-        output,
+        context: 1048576,
+        output: 32768,
       },
-    }
+    },
+    "gemini-4-argon": {
+      name: "Google Gemini 4 Argon",
+      limit: {
+        context: 1048576,
+        output: 65536,
+      },
+    },
   }
-
-  // Preserve existing providers if any
-  const existingProvider = existingConfig.provider && typeof existingConfig.provider === "object"
-    ? existingConfig.provider
-    : {}
-  const existingProviders = existingConfig.providers && typeof existingConfig.providers === "object"
-    ? existingConfig.providers
-    : {}
 
   return {
     $schema: "https://opencode.ai/config.json",
-    ...existingConfig,
+    enabled_providers: [PROVIDER_ID],
     model: `${PROVIDER_ID}/${activeModel}`,
+    small_model: `${PROVIDER_ID}/deepseek-v4-flash`,
     provider: {
-      ...existingProvider,
       [PROVIDER_ID]: {
         npm: "@ai-sdk/openai-compatible",
         name: PROVIDER_NAME,
@@ -133,7 +118,6 @@ export function generateOpenCodeConfig(store, existingConfig = {}) {
       },
     },
     providers: {
-      ...existingProviders,
       [PROVIDER_ID]: {
         name: PROVIDER_NAME,
         package: "@opencode/ai/providers/openai-compatible",
@@ -167,7 +151,7 @@ export async function writeOpenCodeConfigFile(filePath, store) {
 }
 
 /**
- * Updates both global and local opencode.json files if applicable.
+ * Updates both global and local opencode.json files.
  */
 export async function syncOpenCodeConfigs(store, { writeLocal = true, writeGlobal = true } = {}) {
   const results = { global: false, local: false }

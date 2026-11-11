@@ -1,19 +1,21 @@
 /**
  * Gwarden AI Models Definition
  * 
- * Pre-configured models supported by Gwarden (https://gwarden.su/cabinet).
- * Specially highlights DeepSeek V4 Flash (Free) and Google Gemini 4 Argon.
+ * Strictly configured for the 2 user-requested models:
+ * 1. DeepSeek V4 Flash (Free)
+ * 2. Google Gemini 4 Argon
  */
 
 export const PROVIDER_ID = "gwarden"
 export const PROVIDER_NAME = "Gwarden AI"
 export const DEFAULT_BASE_URL = "https://gwarden.su/v1"
+export const DEFAULT_API_KEY = "GWAR-OYOQA2T1-KAWMDNLEYGFV-06VAB-A8GBB8-TYFNQ77N"
 
 export const PRESET_MODELS = {
   "deepseek-v4-flash": {
     id: "deepseek-v4-flash",
     name: "DeepSeek V4 Flash (Бесплатный)",
-    description: "Бесплатная модель DeepSeek с 1M контекстом. Высокая скорость, идеальна когда кончаются токены.",
+    description: "Бесплатная модель DeepSeek с окном 1M токенов. Нулевой расход баланса, идеальна при нехватке токенов.",
     isFree: true,
     isRecommended: true,
     limit: {
@@ -29,7 +31,7 @@ export const PRESET_MODELS = {
   "gemini-4-argon": {
     id: "gemini-4-argon",
     name: "Google Gemini 4 Argon",
-    description: "Флагманская модель Google DeepMind с 1M контекстом. Рекордные показатели в разработке ПО и решении сложных задач.",
+    description: "Флагманская модель Google DeepMind с окном 1M токенов для сложной архитектуры и кодинга.",
     isFree: false,
     isRecommended: true,
     limit: {
@@ -42,100 +44,19 @@ export const PRESET_MODELS = {
       output: ["text"],
     },
   },
-  "deepseek-v4-pro": {
-    id: "deepseek-v4-pro",
-    name: "DeepSeek V4 Pro",
-    description: "Флагманская модель линейки DeepSeek V4 с расширенным выводом (до 64k токенов) и 1M контекстом.",
-    isFree: false,
-    isRecommended: false,
-    limit: {
-      context: 1048576,
-      output: 65536,
-    },
-    capabilities: {
-      tools: true,
-      input: ["text", "image"],
-      output: ["text"],
-    },
-  },
-  "gemini-3.1-pro": {
-    id: "gemini-3.1-pro",
-    name: "Google Gemini 3.1 Pro",
-    description: "Надежная Pro-модель от Google для мультимодальных задач и анализа крупных кодовых баз.",
-    isFree: false,
-    isRecommended: false,
-    limit: {
-      context: 1048576,
-      output: 65536,
-    },
-    capabilities: {
-      tools: true,
-      input: ["text", "image"],
-      output: ["text"],
-    },
-  },
-  "claude-fable-5-1": {
-    id: "claude-fable-5-1",
-    name: "Claude Fable 5.1",
-    description: "Продвинутая модель от Anthropic для агентной работы, рефакторинга и следования инструкциям.",
-    isFree: false,
-    isRecommended: false,
-    limit: {
-      context: 1048576,
-      output: 65536,
-    },
-    capabilities: {
-      tools: true,
-      input: ["text", "image"],
-      output: ["text"],
-    },
-  },
-  "qwen3.8-max": {
-    id: "qwen3.8-max",
-    name: "Qwen 3.8 Max",
-    description: "Мощная модель от Alibaba для программирования на различных языках, контекст 1M.",
-    isFree: false,
-    isRecommended: false,
-    limit: {
-      context: 1048576,
-      output: 32768,
-    },
-    capabilities: {
-      tools: true,
-      input: ["text", "image"],
-      output: ["text"],
-    },
-  },
-  "gwarden-ai": {
-    id: "gwarden-ai",
-    name: "Gwarden AI Coding Assistant",
-    description: "Фирменный ассистент Gwarden для повседневного написания кода, 1M контекст.",
-    isFree: false,
-    isRecommended: false,
-    limit: {
-      context: 1048576,
-      output: 32768,
-    },
-    capabilities: {
-      tools: true,
-      input: ["text", "image"],
-      output: ["text"],
-    },
-  },
 }
 
 /**
  * Builds OpenCode compatible Model.Info object.
  */
-export function buildModelInfo(providerID, modelID, customMeta = {}) {
-  const preset = PRESET_MODELS[modelID] || {}
-  const name = customMeta.name || preset.name || modelID
-  const contextLimit = customMeta.limit?.context || preset.limit?.context || 1048576
-  const outputLimit = customMeta.limit?.output || preset.limit?.output || 32768
+export function buildModelInfo(providerID, modelID) {
+  const preset = PRESET_MODELS[modelID] || PRESET_MODELS["deepseek-v4-flash"]
+  const id = preset.id || modelID
+  const name = preset.name || modelID
 
   return {
-    id: modelID,
-    modelID,
+    id,
+    modelID: id,
     providerID: providerID || PROVIDER_ID,
     name,
     capabilities: {
@@ -143,7 +64,6 @@ export function buildModelInfo(providerID, modelID, customMeta = {}) {
       input: ["text", "image"],
       output: ["text"],
       ...(preset.capabilities || {}),
-      ...(customMeta.capabilities || {}),
     },
     variants: [],
     time: { released: 0 },
@@ -151,8 +71,8 @@ export function buildModelInfo(providerID, modelID, customMeta = {}) {
     status: "active",
     enabled: true,
     limit: {
-      context: contextLimit,
-      output: outputLimit,
+      context: preset.limit.context,
+      output: preset.limit.output,
     },
   }
 }
@@ -163,7 +83,7 @@ export function buildModelInfo(providerID, modelID, customMeta = {}) {
 export function buildProviderInfo(providerID, options = {}) {
   const id = providerID || PROVIDER_ID
   const baseURL = options.baseURL || DEFAULT_BASE_URL
-  const apiKey = options.apiKey || ""
+  const apiKey = options.apiKey || DEFAULT_API_KEY
 
   const settings = { baseURL }
   if (apiKey) {

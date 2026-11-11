@@ -1,13 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": [
+    "gwarden"
+  ],
   "model": "gwarden/deepseek-v4-flash",
+  "small_model": "gwarden/deepseek-v4-flash",
   "provider": {
     "gwarden": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Gwarden AI",
       "options": {
         "baseURL": "https://gwarden.su/v1",
-        "apiKey": "{env:GWARDEN_API_KEY}"
+        "apiKey": "GWAR-OYOQA2T1-KAWMDNLEYGFV-06VAB-A8GBB8-TYFNQ77N"
       },
       "models": {
         "deepseek-v4-flash": {
@@ -33,7 +37,7 @@
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
         "baseURL": "https://gwarden.su/v1",
-        "apiKey": "{env:GWARDEN_API_KEY}"
+        "apiKey": "GWAR-OYOQA2T1-KAWMDNLEYGFV-06VAB-A8GBB8-TYFNQ77N"
       },
       "models": {
         "deepseek-v4-flash": {
