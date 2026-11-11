@@ -1,0 +1,44 @@
+{
+  "name": "opencode-gwarden-mod",
+  "version": "1.0.0",
+  "description": "Мод OpenCode для подключения своей ИИ (провайдер gwarden.su): Google Gemini 4 Argon и бесплатный DeepSeek V4 Flash",
+  "type": "module",
+  "main": "./index.js",
+  "bin": {
+    "opencode-mod": "./bin/switch.js",
+    "opencode-switch": "./bin/switch.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./tui": "./tui.js"
+  },
+  "scripts": {
+    "start": "node bin/switch.js",
+    "switch": "node bin/switch.js",
+    "status": "node bin/switch.js --status",
+    "install-mod": "node bin/switch.js --install",
+    "check-connection": "node bin/switch.js --check",
+    "launch": "node bin/switch.js --launch"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "opencode-mod",
+    "gwarden",
+    "deepseek",
+    "gemini",
+    "deepseek-v4-flash",
+    "gemini-4-argon",
+    "openai-compatible",
+    "ai-coding"
+  ],
+  "author": "FsbAidol",
+  "license": "MIT",
+  "dependencies": {
+    "@opencode/plugin": "^2.2.7",
+    "solid-js": "^1.9.0"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.0.0"
+  }
+}
