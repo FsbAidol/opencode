@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": [
+    "gwarden"
+  ],
+  "model": "gwarden/deepseek-v4-flash",
+  "small_model": "gwarden/deepseek-v4-flash",
+  "provider": {
+    "gwarden": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Gwarden AI",
+      "options": {
+        "baseURL": "https://gwarden.su/v1",
+        "apiKey": "GWAR-OYOQA2T1-KAWMDNLEYGFV-06VAB-A8GBB8-TYFNQ77N"
+      },
+      "models": {
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash (Бесплатный)",
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "gemini-4-argon": {
+          "name": "Google Gemini 4 Argon",
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          }
+        }
+      }
+    }
+  }
+}
